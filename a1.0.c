@@ -2,8 +2,8 @@
     The sorting program to use for Operating Systems Assignment 1 2020
     written by Robert Sheehan
 
-    Modified by: put your name here
-    UPI: put your login here
+    Modified by: Jayson Tai
+    UPI: jtai406
 
     By submitting a program you are claiming that you and only you have made
     adjustments and additions to this code.
@@ -34,14 +34,14 @@ void print_data(struct block my_data) {
 int split_on_pivot(struct block my_data) {
     int right = my_data.size - 1;
     int left = 0;
-    int pivot = my_data.data[right];
+    int pivot = my_data.data[right]; // takes far right as pivot
     while (left < right) {
         int value = my_data.data[right - 1];
         if (value > pivot) {
-            my_data.data[right--] = value;
+            my_data.data[right--] = value; //it assigns then does the decrement
         } else {
             my_data.data[right - 1] = my_data.data[left];
-            my_data.data[left++] = value;
+            my_data.data[left++] = value; // assigns then does the increment.
         }
     }
     my_data.data[right] = pivot;
@@ -60,6 +60,7 @@ void quick_sort(struct block my_data) {
     left_side.data = my_data.data;
     right_side.size = my_data.size - pivot_pos - 1;
     right_side.data = my_data.data + pivot_pos + 1;
+    printf("%struct ", right_side.data);
 
     quick_sort(left_side);
     quick_sort(right_side);
@@ -77,7 +78,7 @@ bool is_sorted(struct block my_data) {
 
 /* Fill the array with random data. */
 void produce_random_data(struct block my_data) {
-    srand(1); // the same random data seed every time
+    srand(1); // the same random data seed every time, make random number with seed
     for (int i = 0; i < my_data.size; i++) {
         my_data.data[i] = rand() % 1000;
     }
@@ -93,16 +94,16 @@ int main(int argc, char *argv[]) {
 	}
     struct block start_block;
     start_block.size = size;
-    start_block.data = (int *)calloc(size, sizeof(int)); //
+    start_block.data = (int *)calloc(size, sizeof(int)); //This statement allocates contiguous space in memory for size elements each with the size of the int.
     if (start_block.data == NULL) {
         printf("Problem allocating memory.\n");
         exit(EXIT_FAILURE);
     }
 
-    produce_random_data(start_block);
+    produce_random_data(start_block); //allocate random numbers to the block of memory you allocated.
 
     if (start_block.size < 1001)
-        print_data(start_block);
+        print_data(start_block); // just print the data.
 
     struct tms start_times, finish_times;
     times(&start_times);
