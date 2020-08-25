@@ -21,7 +21,7 @@
 
 struct block {
     int size;
-    int *data;
+    int *data; //pointer
 };
 
 void print_data(struct block my_data) {
@@ -89,11 +89,11 @@ int main(int argc, char *argv[]) {
 	if (argc < 2) {
 		size = SIZE;
 	} else {
-		size = atol(argv[1]);
+		size = atol(argv[1]); //making a string into long
 	}
     struct block start_block;
     start_block.size = size;
-    start_block.data = (int *)calloc(size, sizeof(int));
+    start_block.data = (int *)calloc(size, sizeof(int)); //
     if (start_block.data == NULL) {
         printf("Problem allocating memory.\n");
         exit(EXIT_FAILURE);
