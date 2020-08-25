@@ -16,6 +16,9 @@
 #include <sys/resource.h>
 #include <stdbool.h>
 #include <sys/times.h>
+#include <pthread.h>
+
+bool isThread = false;
 
 #define SIZE    10
 
@@ -49,9 +52,12 @@ int split_on_pivot(struct block my_data) {
 }
 
 /* Quick sort the data. */
-void quick_sort(struct block my_data) {
+void* quick_sort(void *args) {
+    struct block my_data = *(struct block *)args;
+    isThread = true;
+    // printf("message \n\n");
     if (my_data.size < 2)
-        return;
+        return NULL;
     int pivot_pos = split_on_pivot(my_data);
 
     struct block left_side, right_side;
@@ -60,10 +66,9 @@ void quick_sort(struct block my_data) {
     left_side.data = my_data.data;
     right_side.size = my_data.size - pivot_pos - 1;
     right_side.data = my_data.data + pivot_pos + 1;
-    printf("%struct ", right_side.data);
 
-    quick_sort(left_side);
-    quick_sort(right_side);
+    quick_sort(&left_side);
+    quick_sort(&right_side);
 }
 
 /* Check to see if the data is sorted. */
@@ -83,7 +88,10 @@ void produce_random_data(struct block my_data) {
         my_data.data[i] = rand() % 1000;
     }
 }
-
+// function that gets a pivot
+// sort top on one thread
+// sort bottom half on main thread.
+//merge both sorts together for sort.
 int main(int argc, char *argv[]) {
 	long size;
 
@@ -108,10 +116,23 @@ int main(int argc, char *argv[]) {
     struct tms start_times, finish_times;
     times(&start_times);
     printf("start time in clock ticks: %ld\n", start_times.tms_utime);
-    quick_sort(start_block);
+    // if (my_data.size < 2)
+    //     return;
+    int pivot_pos = split_on_pivot(start_block);
+
+    struct block left_side, right_side;
+
+    left_side.size = pivot_pos;
+    left_side.data = start_block.data;
+    right_side.size = start_block.size - pivot_pos - 1;
+    right_side.data = start_block.data + pivot_pos + 1;
+    pthread_t left_sort;
+    pthread_create(&left_sort, NULL,  quick_sort, &left_side);
+    quick_sort(&right_side);
+    pthread_join(left_sort, NULL);
     times(&finish_times);
     printf("finish time in clock ticks: %ld\n", finish_times.tms_utime);
-
+    printf("%s", isThread ? "true" : "false");
     if (start_block.size < 1001)
         print_data(start_block);
 
