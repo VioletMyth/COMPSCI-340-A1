@@ -18,7 +18,7 @@
 #include <sys/times.h>
 #include <pthread.h>
 
-int numThreads = 0;
+int numThreads = 1;
 
 #define SIZE    10
 
@@ -66,29 +66,18 @@ void* quick_sort(void *args) {
     right_side.data = my_data.data + pivot_pos + 1;
 
     pthread_t sortThread1;
-    pthread_t sortThread2;
     int status1, status2;
     status1 = pthread_create(&sortThread1, NULL, quick_sort, &left_side); // make new thread that sorts the left side
-    // status2 = pthread_create(&sortThread2, NULL, quick_sort, &right_side);
-    printf("we made left thread \n");
     if(status1 == 0){
-        // printf("new thread created");
-        // pthread_create(&sortThread2, NULL, quick_sort, &right_side);
-        // printf("we made right thread \n");
+        
         quick_sort(&right_side); // sort right side on current thread
         numThreads++;
-        pthread_join(sortThread1, NULL); //wait until atleast current current thread terminated before ending.
+        pthread_join(sortThread1, NULL); // wait until atleast current current thread terminated before ending.
     }
     else{
-        printf("we mode no thread \n");
         quick_sort(&left_side);
         quick_sort(&right_side);
     }
-
-    // pthread_join(sortThread1, NULL);
-
-    // quick_sort(left_side);
-    // quick_sort(right_side);
 }
 
 /* Check to see if the data is sorted. */
@@ -141,7 +130,7 @@ int main(int argc, char *argv[]) {
         print_data(start_block);
 
     printf(is_sorted(start_block) ? "sorted\n" : "not sorted\n");
-    printf("you created %d", numThreads);
+    // printf("you created %d", numThreads);
     // printf("Hello, World!");
     free(start_block.data);
     exit(EXIT_SUCCESS);
