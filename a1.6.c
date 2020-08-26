@@ -9,40 +9,49 @@
     adjustments and additions to this code.
  */
 
-#include <stdio.h> 
-#include <stdlib.h> 
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/resource.h>
 #include <stdbool.h>
 #include <sys/times.h>
 #include <pthread.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
 
-#define SIZE    10
+#define SIZE 10
 
-int minSize = 200000;
+int minSize = 200;
 
-struct block {
+struct block
+{
     int size;
     int *data; //pointer
 };
 
-void print_data(struct block my_data) {
+void print_data(struct block my_data)
+{
     for (int i = 0; i < my_data.size; ++i)
         printf("%d ", my_data.data[i]);
     printf("\n");
 }
 
 /* Split the shared array around the pivot, return pivot index. */
-int split_on_pivot(struct block my_data) {
+int split_on_pivot(struct block my_data)
+{
     int right = my_data.size - 1;
     int left = 0;
     int pivot = my_data.data[right]; // takes far right as pivot
-    while (left < right) {
+    while (left < right)
+    {
         int value = my_data.data[right - 1];
-        if (value > pivot) {
+        if (value > pivot)
+        {
             my_data.data[right--] = value; //it assigns then does the decrement
-        } else {
+        }
+        else
+        {
             my_data.data[right - 1] = my_data.data[left];
             my_data.data[left++] = value; // assigns then does the increment.
         }
@@ -52,10 +61,9 @@ int split_on_pivot(struct block my_data) {
 }
 
 /* Quick sort the data. */
-void* quick_sort(void *args) {
+void *quick_sort(void *args)
+{
     struct block my_data = *(struct block *)args;
-
-    int fd2[2];
 
     if (my_data.size < 2)
         return NULL;
@@ -68,47 +76,41 @@ void* quick_sort(void *args) {
     right_side.size = my_data.size - pivot_pos - 1;
     right_side.data = my_data.data + pivot_pos + 1;
 
-    if (left_side.size > minSize || right_side.size > minSize){
-        if(pipe(fd2) == -1){
-            printf("An error occurred during pipe open\n");
-        }
+    if (left_side.size > minSize || right_side.size > minSize)
+    {
 
         int pid2 = fork();
 
-        if(pid2 == -1){
+        if (pid2 == -1)
+        {
             printf("Error occurred in creating fork");
         }
 
-        if(pid2 == 0){
-            close(fd2[0]);
+        if (pid2 == 0)
+        {
             quick_sort(&left_side);
-            if(write(fd2[1], left_side.data, left_side.size * sizeof(int)) == -1){
-                printf("An error occurred in writing to pipe");
-            }
-            close(fd2[1]);
             exit(EXIT_SUCCESS);
         }
 
-        else{
-            close(fd2[1]);
+        else
+        {   
+            wait(NULL);
             quick_sort(&right_side);
-            if(read(fd2[0], left_side.data, left_side.size * sizeof(int)) == -1){
-                printf("An error occurred in reading from pipe");
-            };
-            close(fd2[0]);
         }
     }
-    else{
-        // printf("we did this instead");
+    else
+    {
         quick_sort(&left_side);
         quick_sort(&right_side);
     }
 }
 
 /* Check to see if the data is sorted. */
-bool is_sorted(struct block my_data) {
+bool is_sorted(struct block my_data)
+{
     bool sorted = true;
-    for (int i = 0; i < my_data.size - 1; i++) {
+    for (int i = 0; i < my_data.size - 1; i++)
+    {
         if (my_data.data[i] > my_data.data[i + 1])
             sorted = false;
     }
@@ -116,9 +118,11 @@ bool is_sorted(struct block my_data) {
 }
 
 /* Fill the array with random data. */
-void produce_random_data(struct block my_data) {
+void produce_random_data(struct block my_data)
+{
     srand(1); // the same random data seed every time, make random number with seed
-    for (int i = 0; i < my_data.size; i++) {
+    for (int i = 0; i < my_data.size; i++)
+    {
         my_data.data[i] = rand() % 1000;
     }
 }
@@ -126,18 +130,23 @@ void produce_random_data(struct block my_data) {
 // sort top on one thread
 // sort bottom half on main thread.
 //merge both sorts together for sort.
-int main(int argc, char *argv[]) {
-	long size;
+int main(int argc, char *argv[])
+{
+    long size;
 
-	if (argc < 2) {
-		size = SIZE;
-	} else {
-		size = atol(argv[1]); //making a string into long
-	}
+    if (argc < 2)
+    {
+        size = SIZE;
+    }
+    else
+    {
+        size = atol(argv[1]); //making a string into long
+    }
     struct block start_block;
     start_block.size = size;
-    start_block.data = (int *)calloc(size, sizeof(int)); //This statement allocates contiguous space in memory for size elements each with the size of the int.
-    if (start_block.data == NULL) {
+    start_block.data = (int *)mmap(NULL, start_block.size * sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0); //This statement allocates contiguous space in memory for size elements each with the size of the int.
+    if (start_block.data == MAP_FAILED)
+    {
         printf("Problem allocating memory.\n");
         exit(EXIT_FAILURE);
     }
@@ -152,7 +161,6 @@ int main(int argc, char *argv[]) {
     printf("start time in clock ticks: %ld\n", start_times.tms_utime);
 
     // quick_sort(&start_block);
-    int fd1[2];
 
     int pivot_pos = split_on_pivot(start_block);
 
@@ -163,50 +171,46 @@ int main(int argc, char *argv[]) {
     right_side.size = start_block.size - pivot_pos - 1;
     right_side.data = start_block.data + pivot_pos + 1;
 
-    if (left_side.size > minSize || right_side.size > minSize){
-        if(pipe(fd1) == -1){
-            printf("An error occurred during pipe open\n");
-        }
-
+    if (left_side.size > minSize || right_side.size > minSize)
+    {
         int pid1 = fork();
 
-        if(pid1 == -1){
+        if (pid1 == -1)
+        {
             printf("Error occurred in creating fork");
         }
 
-        if(pid1 == 0){
-            close(fd1[0]);
+        if (pid1 == 0)
+        {
             quick_sort(&left_side);
-            if(write(fd1[1], left_side.data, left_side.size * sizeof(int)) == -1){
-                printf("An error occurred in writing to pipe");
-            }
-            close(fd1[1]);
+        }
+
+        else
+        {
+            wait(NULL);
+            quick_sort(&right_side);
+            times(&finish_times);
+            printf("finish time in clock ticks: %ld\n", finish_times.tms_utime);
+            if (start_block.size < 1001)
+                print_data(start_block);
+
+            printf(is_sorted(start_block) ? "sorted\n" : "not sorted\n");
+            // free(start_block.data);
             exit(EXIT_SUCCESS);
         }
-
-        else{
-            close(fd1[1]);
-            quick_sort(&right_side);
-            if(read(fd1[0], left_side.data, left_side.size * sizeof(int)) == -1){
-                printf("An error occurred in reading from pipe");
-            };
-            close(fd1[0]);
-        }
     }
-    else{
-        // printf("we did this instead");
+    else
+    {
         quick_sort(&left_side);
         quick_sort(&right_side);
+        times(&finish_times);
+        printf("finish time in clock ticks: %ld\n", finish_times.tms_utime);
+        if (start_block.size < 1001)
+            print_data(start_block);
+
+        printf(is_sorted(start_block) ? "sorted\n" : "not sorted\n");
+        // free(start_block.data);
+        exit(EXIT_SUCCESS);
     }
-
     // rest of the main() process.
-    times(&finish_times);
-    printf("finish time in clock ticks: %ld\n", finish_times.tms_utime);
-    if (start_block.size < 1001)
-        print_data(start_block);
-
-    printf(is_sorted(start_block) ? "sorted\n" : "not sorted\n");
-    free(start_block.data);
-    exit(EXIT_SUCCESS);
-
 }
