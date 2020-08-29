@@ -22,7 +22,7 @@
 
 #define SIZE 10
 
-int minSize = 200;
+int minSize = 200000;
 
 struct block
 {
@@ -93,9 +93,9 @@ void *quick_sort(void *args)
         }
 
         else
-        {   
-            wait(NULL);
+        {
             quick_sort(&right_side);
+            wait(NULL); // wait for child process to finish
         }
     }
     else
@@ -160,57 +160,14 @@ int main(int argc, char *argv[])
     times(&start_times);
     printf("start time in clock ticks: %ld\n", start_times.tms_utime);
 
-    // quick_sort(&start_block);
+    quick_sort(&start_block);
+    times(&finish_times);
+    printf("finish time in clock ticks: %ld\n", finish_times.tms_utime);
+    if (start_block.size < 1001)
+        print_data(start_block);
 
-    int pivot_pos = split_on_pivot(start_block);
-
-    struct block left_side, right_side;
-
-    left_side.size = pivot_pos;
-    left_side.data = start_block.data;
-    right_side.size = start_block.size - pivot_pos - 1;
-    right_side.data = start_block.data + pivot_pos + 1;
-
-    if (left_side.size > minSize || right_side.size > minSize)
-    {
-        int pid1 = fork();
-
-        if (pid1 == -1)
-        {
-            printf("Error occurred in creating fork");
-        }
-
-        if (pid1 == 0)
-        {
-            quick_sort(&left_side);
-        }
-
-        else
-        {
-            wait(NULL);
-            quick_sort(&right_side);
-            times(&finish_times);
-            printf("finish time in clock ticks: %ld\n", finish_times.tms_utime);
-            if (start_block.size < 1001)
-                print_data(start_block);
-
-            printf(is_sorted(start_block) ? "sorted\n" : "not sorted\n");
-            // free(start_block.data);
-            exit(EXIT_SUCCESS);
-        }
-    }
-    else
-    {
-        quick_sort(&left_side);
-        quick_sort(&right_side);
-        times(&finish_times);
-        printf("finish time in clock ticks: %ld\n", finish_times.tms_utime);
-        if (start_block.size < 1001)
-            print_data(start_block);
-
-        printf(is_sorted(start_block) ? "sorted\n" : "not sorted\n");
-        // free(start_block.data);
-        exit(EXIT_SUCCESS);
-    }
+    printf(is_sorted(start_block) ? "sorted\n" : "not sorted\n");
+    // free(start_block.data);
+    exit(EXIT_SUCCESS);
     // rest of the main() process.
 }

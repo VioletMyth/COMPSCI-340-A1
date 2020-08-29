@@ -2,8 +2,8 @@
     The sorting program to use for Operating Systems Assignment 1 2020
     written by Robert Sheehan
 
-    Modified by: Jayson Tai
-    UPI: jtai406
+    Modified by: put your name here
+    UPI: put your login here
 
     By submitting a program you are claiming that you and only you have made
     adjustments and additions to this code.
@@ -16,15 +16,12 @@
 #include <sys/resource.h>
 #include <stdbool.h>
 #include <sys/times.h>
-#include <pthread.h>
 
 #define SIZE    10
 
-int minSize = 300000;
-
 struct block {
     int size;
-    int *data; //pointer
+    int *data;
 };
 
 void print_data(struct block my_data) {
@@ -37,14 +34,14 @@ void print_data(struct block my_data) {
 int split_on_pivot(struct block my_data) {
     int right = my_data.size - 1;
     int left = 0;
-    int pivot = my_data.data[right]; // takes far right as pivot
+    int pivot = my_data.data[right];
     while (left < right) {
         int value = my_data.data[right - 1];
         if (value > pivot) {
-            my_data.data[right--] = value; //it assigns then does the decrement
+            my_data.data[right--] = value;
         } else {
             my_data.data[right - 1] = my_data.data[left];
-            my_data.data[left++] = value; // assigns then does the increment.
+            my_data.data[left++] = value;
         }
     }
     my_data.data[right] = pivot;
@@ -52,13 +49,9 @@ int split_on_pivot(struct block my_data) {
 }
 
 /* Quick sort the data. */
-void* quick_sort(void *args) {
-    struct block my_data = *(struct block *)args;
-
-    int fd2[2];
-
+void quick_sort(struct block my_data) {
     if (my_data.size < 2)
-        return NULL;
+        return;
     int pivot_pos = split_on_pivot(my_data);
 
     struct block left_side, right_side;
@@ -68,41 +61,8 @@ void* quick_sort(void *args) {
     right_side.size = my_data.size - pivot_pos - 1;
     right_side.data = my_data.data + pivot_pos + 1;
 
-    if (left_side.size > minSize || right_side.size > minSize){
-        if(pipe(fd2) == -1){
-            printf("An error occurred during pipe open\n");
-        }
-
-        int pid2 = fork();
-
-        if(pid2 == -1){
-            printf("Error occurred in creating fork");
-        }
-
-        if(pid2 == 0){
-            close(fd2[0]);
-            quick_sort(&left_side);
-            if(write(fd2[1], left_side.data, left_side.size * sizeof(int)) == -1){
-                printf("An error occurred in writing to pipe");
-            }
-            close(fd2[1]);
-            exit(EXIT_SUCCESS);
-        }
-
-        else{
-            close(fd2[1]);
-            quick_sort(&right_side);
-            if(read(fd2[0], left_side.data, left_side.size * sizeof(int)) == -1){
-                printf("An error occurred in reading from pipe");
-            };
-            close(fd2[0]);
-        }
-    }
-    else{
-        // printf("we did this instead");
-        quick_sort(&left_side);
-        quick_sort(&right_side);
-    }
+    quick_sort(left_side);
+    quick_sort(right_side);
 }
 
 /* Check to see if the data is sorted. */
@@ -117,50 +77,44 @@ bool is_sorted(struct block my_data) {
 
 /* Fill the array with random data. */
 void produce_random_data(struct block my_data) {
-    srand(1); // the same random data seed every time, make random number with seed
+    srand(1); // the same random data seed every time
     for (int i = 0; i < my_data.size; i++) {
         my_data.data[i] = rand() % 1000;
     }
 }
-// function that gets a pivot
-// sort top on one thread
-// sort bottom half on main thread.
-//merge both sorts together for sort.
+
 int main(int argc, char *argv[]) {
 	long size;
 
 	if (argc < 2) {
 		size = SIZE;
 	} else {
-		size = atol(argv[1]); //making a string into long
+		size = atol(argv[1]);
 	}
     struct block start_block;
     start_block.size = size;
-    start_block.data = (int *)calloc(size, sizeof(int)); //This statement allocates contiguous space in memory for size elements each with the size of the int.
+    start_block.data = (int *)calloc(size, sizeof(int));
     if (start_block.data == NULL) {
         printf("Problem allocating memory.\n");
         exit(EXIT_FAILURE);
     }
 
-    produce_random_data(start_block); //allocate random numbers to the block of memory you allocated.
+    produce_random_data(start_block);
 
     if (start_block.size < 1001)
-        print_data(start_block); // just print the data.
+        print_data(start_block);
 
     struct tms start_times, finish_times;
     times(&start_times);
     printf("start time in clock ticks: %ld\n", start_times.tms_utime);
-
-    quick_sort(&start_block);
-
-    // rest of the main() process.
+    quick_sort(start_block);
     times(&finish_times);
     printf("finish time in clock ticks: %ld\n", finish_times.tms_utime);
+
     if (start_block.size < 1001)
         print_data(start_block);
 
     printf(is_sorted(start_block) ? "sorted\n" : "not sorted\n");
     free(start_block.data);
     exit(EXIT_SUCCESS);
-
 }
